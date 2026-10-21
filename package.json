@@ -1,0 +1,11 @@
+{
+  "name": "cash-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cash Ledger: Bank and Cash expense tracker",
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  }
+}
