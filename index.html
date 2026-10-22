@@ -1391,7 +1391,7 @@ document.addEventListener('click',function(ev){
       (async function(){
         if(S.settings.biometric){await saveSettings(function(s){s.biometric=false;});toast('Fingerprint unlock turned off');return;}
         if(!(await bioAvailable())){toast('No fingerprint is set up on this phone. Add one in your phone settings first.',true);return;}
-        try{await bioPrompt('Confirm your fingerprint');}catch(e){toast('Fingerprint not confirmed',true);return;}
+        try{await bioPrompt('Confirm your fingerprint');}catch(e){toast('Fingerprint not confirmed ('+String((e&&(e.code||e.message))||'no details').slice(0,80)+')',true);return;}
         var ok=await saveSettings(function(s){s.biometric=true;});if(ok)toast('Fingerprint unlock turned on');
       })();return;
     case 'catadd':openCatModal(null);return;
