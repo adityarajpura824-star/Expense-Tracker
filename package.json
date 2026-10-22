@@ -1,10 +1,12 @@
 {
   "name": "cash-ledger",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Cash Ledger: Bank and Cash expense tracker",
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "8.0.2",
     "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.0",
     "@capacitor/cli": "^6.2.0",
     "@capacitor/core": "^6.2.0"
   }

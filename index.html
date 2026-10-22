@@ -270,6 +270,7 @@ body{margin:0}[hidden]{display:none!important}img{max-width:100%}
       <p class="err" id="lk_err" role="alert" hidden></p>
       <button class="btn primary block" type="submit">Unlock</button>
     </form>
+    <button class="btn block" type="button" id="lk_bio" hidden style="margin-top:10px">Use fingerprint</button>
     <button class="linkbtn" type="button" id="lk_forgot">Forgot PIN?</button>
   </div></section>
 
@@ -427,7 +428,7 @@ var LEGACY={'Food & drink':'food','Transport':'transport','Rent & housing':'rent
 var COLORS=['#D9622B','#C9A227','#2E9E6B','#1E9E8A','#2F7FD1','#7B5BD6','#D13F8A','#D1453B','#7C8B96','#3B5B7A'];
 var EMOJIS=['🍽️','☕','🍕','🛒','🚌','🚗','⛽','🚆','✈️','🏠','💡','📱','🌐','👕','🛍️','💊','🏥','📚','🎓','🎬','🎮','🎵','🏋️','💇','🐶','🎁','👛','💼','💻','💰','🏦','📈','↩️','🧾','🔧','🧴','🍺','🎉','👶','📦'];
 function clone(o){return JSON.parse(JSON.stringify(o));}
-function defaultSettings(){return {openingBank:0,openingCash:0,categories:clone(DEFAULT_CATS),pin:null};}
+function defaultSettings(){return {openingBank:0,openingCash:0,categories:clone(DEFAULT_CATS),pin:null,biometric:false};}
 
 /* ================= storage ================= */
 /* One document per entry, plus 'profile' and 'settings' documents.
@@ -500,6 +501,7 @@ function normSettings(raw){
     s.openingCash=+raw.openingCash||0;
     if(raw.categories&&Array.isArray(raw.categories.expense)&&Array.isArray(raw.categories.income))s.categories=raw.categories;
     s.pin=raw.pin&&raw.pin.hash?raw.pin:null;
+    s.biometric=!!raw.biometric&&!!s.pin;
   }
   return s;
 }
@@ -979,6 +981,25 @@ async function checkPin(pin){
   var p=S.settings.pin;if(!p)return true;
   return (await hashPin(pin,p.salt))===p.hash;
 }
+var NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+var BIO=null;try{if(NATIVE)BIO=window.Capacitor.registerPlugin('BiometricAuthNative');}catch(e){}
+var bioBusy=false;
+async function bioAvailable(){try{var r=await BIO.checkBiometry();return !!(r&&r.isAvailable);}catch(e){return false;}}
+async function bioPrompt(reason){
+  await BIO.authenticate({reason:reason,cancelTitle:'Cancel',allowDeviceCredential:false,androidTitle:'Cash Ledger',androidSubtitle:reason,androidConfirmationRequired:false});
+}
+async function tryBio(){
+  if(!BIO||bioBusy)return;bioBusy=true;
+  try{await bioPrompt('Unlock Cash Ledger');S.unlocked=true;route();renderAll();}
+  catch(e){/* cancelled or not recognised: stay on the PIN screen */}
+  bioBusy=false;
+}
+function maybeAutoBio(){if(S.settings.biometric&&BIO&&!document.hidden)setTimeout(tryBio,250);}
+function bioRow(hasPin){
+  if(!BIO)return '<div class="srow"><div class="l"><b>Fingerprint unlock</b><span>Only in the installed Android app. Not available in the web version.</span></div></div>';
+  var on=!!S.settings.biometric;
+  return '<div class="srow"><div class="l"><b>Fingerprint unlock</b><span>'+(on?'On. Open the app with your fingerprint. Your PIN stays as the backup.':hasPin?'Off. Use your phone’s fingerprint to unlock.':'Turn on the PIN lock first. Your PIN stays as the backup.')+'</span></div><div class="btnrow"><button class="btn small'+(on?' ghost':' primary')+'" type="button" data-act="biotoggle"'+(!on&&!hasPin?' disabled':'')+'>'+(on?'Turn off':'Turn on')+'</button></div></div>';
+}
 var guard={fails:0,until:0};
 function guardMsg(){var s=Math.ceil((guard.until-Date.now())/1000);return s>0?'Too many wrong tries. Wait '+s+' seconds.':'';}
 async function tryPin(pin){
@@ -1008,7 +1029,7 @@ function renderSettings(){
   h+='<div class="panel"><div class="phead"><h2>Security</h2></div>'
     +'<div class="srow"><div class="l"><b>PIN lock</b><span>'+(hasPin?'On. Asked each time you open the app.':'Off. Anyone who opens this page can see your ledger.')+'</span></div><div class="btnrow">'
     +(hasPin?'<button class="btn small" type="button" data-act="pinchange">Change PIN</button><button class="btn small ghost" type="button" data-act="pinoff">Turn off</button>':'<button class="btn small primary" type="button" data-act="pinset">Turn on</button>')+'</div></div>'
-    +'<div class="srow"><div class="l"><b>Fingerprint unlock</b><span>Not available. This app runs in a sandboxed page that cannot use your phone’s fingerprint sensor. Use your phone’s own screen lock together with the PIN.</span></div></div>'
+    +bioRow(hasPin)
     +'<p class="hint">The PIN keeps other people on your phone or computer out of the app. It is not encryption, and it cannot be reset by email.</p></div>';
   h+='<div class="panel"><div class="phead"><h2>Opening balances</h2></div>'
     +'<div class="cols2"><div class="field"><label for="oBank">Bank (₹)</label><input id="oBank" type="number" inputmode="decimal" step="0.01" value="'+(S.settings.openingBank||'')+'" placeholder="0"></div>'
@@ -1057,7 +1078,7 @@ function openPinModal(mode){
       ev.preventDefault();
       if(has){var r=await tryPin($('m_cur').value);if(!r.ok)return modalErr(r.msg);}
       if(mode==='off'){
-        var ok=await saveSettings(function(s){s.pin=null;});
+        var ok=await saveSettings(function(s){s.pin=null;s.biometric=false;});
         if(ok){S.unlocked=true;toast('PIN lock turned off');closeModal();}return;
       }
       var a=$('m_new').value,b=$('m_new2').value;
@@ -1276,7 +1297,7 @@ function route(){
     if(!$('si_email').value)$('si_email').value='';
     showGate('gSignin');return;
   }
-  if(S.settings.pin&&!S.unlocked){$('lk_who').textContent='Signed in as '+S.profile.email+'.';showGate('gLock');return;}
+  if(S.settings.pin&&!S.unlocked){$('lk_who').textContent='Signed in as '+S.profile.email+'.';$('lk_bio').hidden=!(S.settings.biometric&&BIO);showGate('gLock');maybeAutoBio();return;}
   showGate('');
 }
 function setErr(id,m){var p=$(id);p.textContent=m;p.hidden=!m;}
@@ -1307,6 +1328,7 @@ $('lkForm').addEventListener('submit',async function(ev){
 $('lk_pin').addEventListener('input',function(){if(/^\d{4}$/.test(this.value))$('lkForm').requestSubmit();});
 $('si_forgot').addEventListener('click',openForgot);
 $('lk_forgot').addEventListener('click',openForgot);
+$('lk_bio').addEventListener('click',tryBio);
 var hiddenAt=0;
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){hiddenAt=Date.now();return;}
@@ -1357,6 +1379,13 @@ document.addEventListener('click',function(ev){
     case 'pinset':openPinModal('set');return;
     case 'pinchange':openPinModal('change');return;
     case 'pinoff':openPinModal('off');return;
+    case 'biotoggle':
+      (async function(){
+        if(S.settings.biometric){await saveSettings(function(s){s.biometric=false;});toast('Fingerprint unlock turned off');return;}
+        if(!(await bioAvailable())){toast('No fingerprint is set up on this phone. Add one in your phone settings first.',true);return;}
+        try{await bioPrompt('Confirm your fingerprint');}catch(e){toast('Fingerprint not confirmed',true);return;}
+        var ok=await saveSettings(function(s){s.biometric=true;});if(ok)toast('Fingerprint unlock turned on');
+      })();return;
     case 'catadd':openCatModal(null);return;
     case 'catedit':openCatModal(id);return;
     case 'catdel':openCatDelete(id);return;
