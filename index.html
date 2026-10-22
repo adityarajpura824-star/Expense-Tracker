@@ -994,7 +994,7 @@ function bioDebug(){
 var bioBusy=false;
 async function bioAvailable(){try{var r=await BIO.checkBiometry();return !!(r&&r.isAvailable);}catch(e){return false;}}
 async function bioPrompt(reason){
-  await BIO.authenticate({reason:reason,cancelTitle:'Cancel',allowDeviceCredential:false,androidTitle:'Cash Ledger',androidSubtitle:reason,androidConfirmationRequired:false});
+  await BIO.internalAuthenticate({reason:reason,cancelTitle:'Cancel',allowDeviceCredential:false,androidTitle:'Cash Ledger',androidSubtitle:reason,androidConfirmationRequired:false});
 }
 async function tryBio(){
   if(!BIO||bioBusy)return;bioBusy=true;
