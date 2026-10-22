@@ -982,7 +982,15 @@ async function checkPin(pin){
   return (await hashPin(pin,p.salt))===p.hash;
 }
 var NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
-var BIO=null;try{if(NATIVE)BIO=window.Capacitor.registerPlugin('BiometricAuthNative');}catch(e){}
+var BIO=null;
+try{
+  var CP=window.Capacitor&&window.Capacitor.Plugins;
+  if(CP&&CP.BiometricAuthNative)BIO=CP.BiometricAuthNative;
+  else if(NATIVE&&window.Capacitor.registerPlugin)BIO=window.Capacitor.registerPlugin('BiometricAuthNative');
+}catch(e){}
+function bioDebug(){
+  try{var C=window.Capacitor;return 'Capacitor '+(C?'found':'missing')+', platform '+(C&&C.getPlatform?C.getPlatform():'?')+', plugins: '+(C&&C.Plugins?Object.keys(C.Plugins).join(', ')||'none':'none');}catch(e){return 'no details';}
+}
 var bioBusy=false;
 async function bioAvailable(){try{var r=await BIO.checkBiometry();return !!(r&&r.isAvailable);}catch(e){return false;}}
 async function bioPrompt(reason){
@@ -996,7 +1004,7 @@ async function tryBio(){
 }
 function maybeAutoBio(){if(S.settings.biometric&&BIO&&!document.hidden)setTimeout(tryBio,250);}
 function bioRow(hasPin){
-  if(!BIO)return '<div class="srow"><div class="l"><b>Fingerprint unlock</b><span>Only in the installed Android app. Not available in the web version.</span></div></div>';
+  if(!BIO)return '<div class="srow"><div class="l"><b>Fingerprint unlock</b><span>Only in the installed Android app. Not available in the web version.</span>'+(NATIVE?'<span style="font-size:12px">Details for support: '+esc(bioDebug())+'</span>':'')+'</div></div>';
   var on=!!S.settings.biometric;
   return '<div class="srow"><div class="l"><b>Fingerprint unlock</b><span>'+(on?'On. Open the app with your fingerprint. Your PIN stays as the backup.':hasPin?'Off. Use your phone’s fingerprint to unlock.':'Turn on the PIN lock first. Your PIN stays as the backup.')+'</span></div><div class="btnrow"><button class="btn small'+(on?' ghost':' primary')+'" type="button" data-act="biotoggle"'+(!on&&!hasPin?' disabled':'')+'>'+(on?'Turn off':'Turn on')+'</button></div></div>';
 }
