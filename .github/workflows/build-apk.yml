@@ -18,7 +18,7 @@ jobs:
       - name: Prepare web files
         run: |
           mkdir -p www
-          cp index.html www/index.html
+          cp site/index.html www/index.html
       - name: Install Capacitor
         run: npm install
       - name: Add Android project
