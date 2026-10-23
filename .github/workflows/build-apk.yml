@@ -30,10 +30,43 @@ jobs:
           grep -n USE_BIOMETRIC "$M"
       - name: Sync web files
         run: npx cap sync android
-      - name: Build debug APK
+      - name: Check for signing key
+        id: key
+        env:
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then echo "signed=1" >> "$GITHUB_OUTPUT"; else echo "signed=0" >> "$GITHUB_OUTPUT"; echo "::warning::No KEYSTORE_BASE64 secret, building an unsigned-for-update debug APK instead"; fi
+      - name: Set version and signing
+        env:
+          SIGN: ${{ steps.key.outputs.signed }}
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ "$SIGN" = "1" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/cash-ledger.keystore"; fi
+          KEYSTORE_PATH="$RUNNER_TEMP/cash-ledger.keystore" python3 scripts/patch_gradle.py
+      - name: Build release APK
+        if: steps.key.outputs.signed == '1'
+        working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/cash-ledger.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+      - name: Build debug APK (fallback)
+        if: steps.key.outputs.signed != '1'
         working-directory: android
         run: ./gradlew assembleDebug
-      - name: Upload APK
+      - name: Upload release APK
+        if: steps.key.outputs.signed == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cash-ledger-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+      - name: Upload debug APK
+        if: steps.key.outputs.signed != '1'
         uses: actions/upload-artifact@v4
         with:
           name: cash-ledger-apk
