@@ -1,5 +1,9 @@
 {
   "appId": "com.aditya.cashledger",
   "appName": "Cash Ledger",
-  "webDir": "www"
+  "webDir": "www",
+  "server": {
+    "url": "https://adityarajpura824-star.github.io/Expense-Tracker/",
+    "androidScheme": "https"
+  }
 }
