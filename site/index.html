@@ -101,7 +101,7 @@ h3{font-weight:600;font-size:.98rem}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;min-width:0}
 .field>label,.field>.lbl{font-size:13px;font-weight:500}
 .opt{color:var(--muted);font-weight:400}
-.inp,.field input[type=text],.field input[type=email],.field input[type=number],.field input[type=date],.field input[type=password],.field select,.field textarea{
+.inp,.field input[type=text],.field input[type=number],.field input[type=date],.field input[type=password],.field select,.field textarea{
   width:100%;min-width:0;background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:11px 10px;font-size:16px;color:var(--ink)}
 .field textarea{min-height:110px;font:13px/1.4 var(--font-mono);resize:vertical}
 .inp:focus-visible,.field input:focus-visible,.field select:focus-visible,.field textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -239,7 +239,7 @@ body{margin:0}[hidden]{display:none!important}img{max-width:100%}
 
 <div class="wrap">
 
-  <!-- gate screens: loading, create profile, sign in, PIN lock -->
+  <!-- gate screens: loading, create profile, PIN lock -->
   <section class="gate on" id="gLoad"><div class="box"><div class="brandmark"><i></i><i></i><i></i></div><h1>Cash Ledger</h1><p class="hint" id="gLoadMsg">Opening your ledger…</p></div></section>
 
   <section class="gate" id="gOnboard"><div class="box">
@@ -248,25 +248,10 @@ body{margin:0}[hidden]{display:none!important}img{max-width:100%}
     <p class="hint" style="margin-bottom:16px">Your ledger, categories and balances will belong to this profile.</p>
     <form id="onForm" novalidate>
       <div class="field"><label for="on_name">Your name</label><input id="on_name" type="text" autocomplete="name" maxlength="60"></div>
-      <div class="field"><label for="on_email">Email</label><input id="on_email" type="email" autocomplete="email" inputmode="email" maxlength="120" value="adityarajpura824@gmail.com"></div>
       <p class="err" id="on_err" role="alert" hidden></p>
       <button class="btn primary block" type="submit">Create profile</button>
     </form>
-    <p class="hint" style="margin-top:14px">Your email is only a label that matches you to this profile when you sign in. It is not verified and nothing is ever sent to it.</p>
-  </div></section>
-
-  <section class="gate" id="gSignin"><div class="box">
-    <div class="brandmark"><i></i><i></i><i></i></div>
-    <h1>Sign in</h1>
-    <p class="hint" style="margin-bottom:16px">Use the email you created your profile with to open your saved ledger.</p>
-    <form id="siForm" novalidate>
-      <div class="field"><label for="si_email">Email</label><input id="si_email" type="email" autocomplete="email" inputmode="email"></div>
-      <div class="field" id="si_pinF" hidden><label for="si_pin">PIN</label><input id="si_pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></div>
-      <p class="err" id="si_err" role="alert" hidden></p>
-      <button class="btn primary block" type="submit">Sign in</button>
-    </form>
-    <p class="hint" style="margin-top:14px">This is a screen lock for this app, not an online account. It cannot send emails, so there is no password reset by email.</p>
-    <button class="linkbtn" type="button" id="si_forgot" hidden>Forgot PIN?</button>
+    <p class="hint" style="margin-top:14px">Your name is only shown at the top of the app. Your data stays on this device.</p>
   </div></section>
 
   <section class="gate" id="gLock"><div class="box">
@@ -406,8 +391,6 @@ function daysIn(ym){var p=ym.split('-').map(Number);return new Date(p[0],p[1],0)
 function dayLabel(s){return parse(s).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function newId(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function pctText(a,b){if(!b)return a?'new':'–';var p=(a-b)/Math.abs(b)*100;return (p>0?'+':p<0?'−':'')+Math.abs(p).toFixed(0)+'%';}
-function normEmail(s){return String(s||'').trim().toLowerCase();}
-function validEmail(s){return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);}
 
 /* ================= defaults ================= */
 var DEFAULT_CATS={
@@ -497,7 +480,7 @@ async function initStore(){
 var store=null;
 var S={
   ready:false,profile:null,settings:defaultSettings(),entries:[],
-  signedIn:false,unlocked:false,
+  unlocked:false,
   tab:'add',month:ymOf(ymd(today())),year:today().getFullYear(),
   eView:'all',fMonth:ymOf(ymd(today())),fCat:'',fAcct:'',fType:'',fStat:'',
   catKind:'expense',editing:null,confirmId:null
@@ -513,9 +496,6 @@ function normSettings(raw){
   }
   return s;
 }
-var SESSION_KEY='cl-session',memSession=null;
-function getSession(){try{var v=localStorage.getItem(SESSION_KEY);return v?JSON.parse(v):memSession;}catch(e){return memSession;}}
-function setSession(v){memSession=v;try{if(v)localStorage.setItem(SESSION_KEY,JSON.stringify(v));else localStorage.removeItem(SESSION_KEY);}catch(e){}}
 
 /* ================= categories ================= */
 function catList(kind){return S.settings.categories[kind]||[];}
@@ -1037,16 +1017,16 @@ function catRows(kind){
   }).join(''):'<p class="empty">No categories yet.</p>';
 }
 function renderSettings(){
-  var p=S.profile||{name:'',email:''},hasPin=!!S.settings.pin,hasEx=S.entries.some(function(e){return e.example;});
+  var p=S.profile||{name:''},hasPin=!!S.settings.pin,hasEx=S.entries.some(function(e){return e.example;});
   var h='';
   h+='<div class="panel"><div class="phead"><h2>Profile</h2></div>'
-    +'<div class="srow"><div class="l"><b>'+esc(p.name)+'</b><span>'+esc(p.email)+'</span></div><div class="btnrow"><button class="btn small" type="button" data-act="editprofile">Edit</button><button class="btn small ghost" type="button" data-act="logout">Log out</button></div></div>'
-    +'<p class="hint">Your data is saved '+(store&&store.mode==='account'?'privately in your Claude account for this app':'in this browser only')+', under this profile. Logging out only returns you to the sign-in screen. Signing in again with the same email brings everything back. The email is a label, not a verified login, and nothing is ever sent to it.</p></div>';
+    +'<div class="srow"><div class="l"><b>'+esc(p.name)+'</b></div><div class="btnrow"><button class="btn small" type="button" data-act="editprofile">Edit</button></div></div>'
+    +'<p class="hint">Your data is saved '+(store&&store.mode==='account'?'privately in your Claude account for this app':'in this browser only')+', under this profile.</p></div>';
   h+='<div class="panel"><div class="phead"><h2>Security</h2></div>'
     +'<div class="srow"><div class="l"><b>PIN lock</b><span>'+(hasPin?'On. Asked each time you open the app.':'Off. Anyone who opens this page can see your ledger.')+'</span></div><div class="btnrow">'
     +(hasPin?'<button class="btn small" type="button" data-act="pinchange">Change PIN</button><button class="btn small ghost" type="button" data-act="pinoff">Turn off</button>':'<button class="btn small primary" type="button" data-act="pinset">Turn on</button>')+'</div></div>'
     +bioRow(hasPin)
-    +'<p class="hint">The PIN keeps other people on your phone or computer out of the app. It is not encryption, and it cannot be reset by email.</p></div>';
+    +'<p class="hint">The PIN keeps other people on your phone or computer out of the app. It is not encryption, and it cannot be reset if you forget it. Keep a JSON backup.</p></div>';
   h+='<div class="panel"><div class="phead"><h2>Opening balances</h2></div>'
     +'<div class="cols2"><div class="field"><label for="oBank">Bank (₹)</label><input id="oBank" type="number" inputmode="decimal" step="0.01" value="'+(S.settings.openingBank||'')+'" placeholder="0"></div>'
     +'<div class="field"><label for="oCash">Cash (₹)</label><input id="oCash" type="number" inputmode="decimal" step="0.01" value="'+(S.settings.openingCash||'')+'" placeholder="0"></div></div>'
@@ -1069,17 +1049,15 @@ function modalErr(msg){var p=$('sheet').querySelector('.err');if(p){p.textConten
 function openProfileModal(){
   var p=S.profile;
   openModal('<h2>Edit profile</h2><form id="mForm" novalidate><div class="field"><label for="m_name">Name</label><input id="m_name" type="text" maxlength="60" value="'+esc(p.name)+'"></div>'
-    +'<div class="field"><label for="m_email">Email</label><input id="m_email" type="email" inputmode="email" maxlength="120" value="'+esc(p.email)+'"></div>'
     +'<p class="err" role="alert" hidden></p><div class="btnrow"><button class="btn primary" type="submit">Save</button><button class="btn ghost" type="button" data-close>Cancel</button></div></form>',
   function(sh){
     sh.querySelector('[data-close]').onclick=closeModal;
     $('mForm').onsubmit=async function(ev){
       ev.preventDefault();
-      var name=$('m_name').value.trim(),email=$('m_email').value.trim();
+      var name=$('m_name').value.trim();
       if(!name)return modalErr('Enter your name.');
-      if(!validEmail(email))return modalErr('Enter a valid email address.');
-      var ok=await run(store.setDoc('profile',{name:name,email:email,createdAt:p.createdAt||Date.now()}),'Profile updated');
-      if(ok){setSession({email:email});closeModal();}
+      var ok=await run(store.setDoc('profile',{name:name,createdAt:p.createdAt||Date.now()}),'Profile updated');
+      if(ok)closeModal();
     };
   });
 }
@@ -1189,7 +1167,7 @@ async function saveFile(name,text){
   showText(name,text);
 }
 function exportJson(){
-  var obj={app:'cash-ledger',version:2,exportedAt:new Date().toISOString(),profile:S.profile,
+  var obj={app:'cash-ledger',version:2,exportedAt:new Date().toISOString(),profile:S.profile?{name:S.profile.name}:null,
     settings:{openingBank:S.settings.openingBank,openingCash:S.settings.openingCash,categories:S.settings.categories},
     entries:S.entries.slice().sort(sortOld)};
   saveFile('cash-ledger-backup-'+ymd(today())+'.json',JSON.stringify(obj,null,2));
@@ -1219,7 +1197,7 @@ function parseBackup(text){
   if(!o||!Array.isArray(o.entries))return {error:'This does not look like a Cash Ledger backup.'};
   var seen={},list=[],skipped=0;
   o.entries.forEach(function(x){var e=cleanEntry(x);if(!e){skipped++;return;}while(seen[e.id])e.id=newId();seen[e.id]=1;list.push(e);});
-  return {entries:list,skipped:skipped,profile:o.profile&&o.profile.email?{name:String(o.profile.name||'').slice(0,60),email:String(o.profile.email).slice(0,120)}:null,settings:o.settings||null};
+  return {entries:list,skipped:skipped,profile:o.profile&&o.profile.name?{name:String(o.profile.name).slice(0,60)}:null,settings:o.settings||null};
 }
 function openImport(){
   openModal('<h2>Import backup</h2><p class="hint" style="margin:0 0 12px">Choose a Cash Ledger JSON backup, or paste its text. Importing replaces everything currently in this app.</p>'
@@ -1237,7 +1215,7 @@ function openImport(){
   });
 }
 function confirmImport(res){
-  openModal('<h2>Replace your data?</h2><p>This backup has <b>'+res.entries.length+'</b> entr'+(res.entries.length===1?'y':'ies')+(res.skipped?' ('+res.skipped+' unreadable rows skipped)':'')+(res.profile?' for <b>'+esc(res.profile.email)+'</b>':'')+'. Everything now in the app will be replaced.</p>'
+  openModal('<h2>Replace your data?</h2><p>This backup has <b>'+res.entries.length+'</b> entr'+(res.entries.length===1?'y':'ies')+(res.skipped?' ('+res.skipped+' unreadable rows skipped)':'')+(res.profile?' for <b>'+esc(res.profile.name)+'</b>':'')+'. Everything now in the app will be replaced.</p>'
     +'<p class="hint" id="im_prog"></p><div class="btnrow"><button class="btn danger" type="button" id="im_yes">Replace with this backup</button><button class="btn ghost" type="button" data-close>Cancel</button></div>',
   function(sh){
     sh.querySelector('[data-close]').onclick=closeModal;
@@ -1248,7 +1226,7 @@ function confirmImport(res){
       if(bad){prog.textContent='Something went wrong part way. Try the import again.';this.disabled=false;return;}
       var st=normSettings(res.settings||null);st.pin=S.settings.pin;
       await run(store.setDoc('settings',st));
-      if(res.profile){await run(store.setDoc('profile',{name:res.profile.name||'You',email:res.profile.email,createdAt:Date.now()}));setSession({email:res.profile.email});}
+      if(res.profile){await run(store.setDoc('profile',{name:res.profile.name||'You',createdAt:Date.now()}));}
       toast('Backup restored');closeModal();
     };
   });
@@ -1282,7 +1260,7 @@ async function eraseAll(){
   var l=S.entries.slice();
   for(var i=0;i<l.length;i++)await run(store.delEntry(l[i].id));
   await run(store.delDoc('settings'));await run(store.delDoc('profile'));
-  setSession(null);S.unlocked=false;toast('All data erased');
+  S.unlocked=false;toast('All data erased');
 }
 function openErase(title,lead){
   openModal('<h2>'+esc(title)+'</h2><p>'+lead+'</p><label class="chk"><input type="checkbox" id="er_ok"><span>I understand this cannot be undone</span></label>'
@@ -1294,11 +1272,11 @@ function openErase(title,lead){
   });
 }
 function openForgot(){
-  openErase('Forgot your PIN?','This app cannot email you a reset, because it has no server and cannot send email. The only way back in is to erase the data here and then restore it from a JSON backup (Settings, Import backup). Without a backup, the data is lost.');
+  openErase('Forgot your PIN?','This app has no server, so it cannot reset your PIN for you. The only way back in is to erase the data here and then restore it from a JSON backup (Settings, Import backup). Without a backup, the data is lost.');
 }
 
 /* ================= gate screens ================= */
-var GATES=['gLoad','gOnboard','gSignin','gLock'];
+var GATES=['gLoad','gOnboard','gLock'];
 function showGate(id){
   GATES.forEach(function(g){$(g).classList.toggle('on',g===id);});
   var app=!id;$('app').hidden=!app;$('tabs').hidden=!app;
@@ -1306,34 +1284,18 @@ function showGate(id){
 function route(){
   if(!S.ready){showGate('gLoad');return;}
   if(!S.profile){showGate('gOnboard');return;}
-  var sess=getSession();
-  S.signedIn=!!(sess&&normEmail(sess.email)===normEmail(S.profile.email));
-  if(!S.signedIn){
-    $('si_pinF').hidden=!S.settings.pin;$('si_forgot').hidden=!S.settings.pin;
-    if(!$('si_email').value)$('si_email').value='';
-    showGate('gSignin');return;
-  }
-  if(S.settings.pin&&!S.unlocked){$('lk_who').textContent='Signed in as '+S.profile.email+'.';$('lk_bio').hidden=!(S.settings.biometric&&BIO);showGate('gLock');maybeAutoBio();return;}
+  if(S.settings.pin&&!S.unlocked){$('lk_who').textContent='Signed in as '+S.profile.name+'.';$('lk_bio').hidden=!(S.settings.biometric&&BIO);showGate('gLock');maybeAutoBio();return;}
   showGate('');
 }
 function setErr(id,m){var p=$(id);p.textContent=m;p.hidden=!m;}
 $('onForm').addEventListener('submit',async function(ev){
   ev.preventDefault();
-  var name=$('on_name').value.trim(),email=$('on_email').value.trim();
+  var name=$('on_name').value.trim();
   if(!name){setErr('on_err','Enter your name.');$('on_name').focus();return;}
-  if(!validEmail(email)){setErr('on_err','Enter a valid email address.');$('on_email').focus();return;}
   setErr('on_err','');
-  setSession({email:email});S.unlocked=true;
-  var ok=await run(store.setDoc('profile',{name:name,email:email,createdAt:Date.now()}));
-  if(!ok){setSession(null);setErr('on_err','Could not save your profile. Try again.');}
-});
-$('siForm').addEventListener('submit',async function(ev){
-  ev.preventDefault();
-  var email=$('si_email').value.trim();
-  if(!validEmail(email)){setErr('si_err','Enter the email you used for your profile.');return;}
-  if(normEmail(email)!==normEmail(S.profile.email)){setErr('si_err','No profile with that email in this app. This app keeps one profile per Claude account. To bring in another profile’s data, restore its JSON backup.');return;}
-  if(S.settings.pin){var r=await tryPin($('si_pin').value);if(!r.ok){setErr('si_err',r.msg);return;}}
-  setErr('si_err','');$('si_pin').value='';S.unlocked=true;setSession({email:S.profile.email});route();renderAll();
+  S.unlocked=true;
+  var ok=await run(store.setDoc('profile',{name:name,createdAt:Date.now()}));
+  if(!ok)setErr('on_err','Could not save your profile. Try again.');
 });
 $('lkForm').addEventListener('submit',async function(ev){
   ev.preventDefault();
@@ -1342,7 +1304,6 @@ $('lkForm').addEventListener('submit',async function(ev){
   setErr('lk_err','');$('lk_pin').value='';S.unlocked=true;route();renderAll();
 });
 $('lk_pin').addEventListener('input',function(){if(/^\d{4}$/.test(this.value))$('lkForm').requestSubmit();});
-$('si_forgot').addEventListener('click',openForgot);
 $('lk_forgot').addEventListener('click',openForgot);
 $('lk_bio').addEventListener('click',tryBio);
 var hiddenAt=0;
@@ -1391,7 +1352,6 @@ document.addEventListener('click',function(ev){
       var e=S.entries.filter(function(x){return x.id===id;})[0];if(!e)return;
       run(store.putEntry(Object.assign({},e,{status:'done',date:e.date>ymd(today())?ymd(today()):e.date})),e.type==='income'?'Marked as received':'Marked as paid');return;
     case 'editprofile':openProfileModal();return;
-    case 'logout':setSession(null);S.unlocked=false;$('si_email').value='';route();toast('Logged out. Your data is kept.');return;
     case 'pinset':openPinModal('set');return;
     case 'pinchange':openPinModal('change');return;
     case 'pinoff':openPinModal('off');return;
@@ -1427,7 +1387,8 @@ initStore().then(function(s){
   store=s;
   store.start(function(list,docs){
     S.entries=list.map(normEntry).filter(Boolean);
-    S.profile=docs.profile&&docs.profile.email?docs.profile:null;
+    S.profile=docs.profile&&docs.profile.name?docs.profile:null;
+    if(S.profile&&S.profile.email)store.setDoc('profile',{name:S.profile.name,createdAt:S.profile.createdAt||Date.now()});
     S.settings=normSettings(docs.settings);
     S.ready=true;
     if(!S.settings.pin)S.unlocked=true;
